@@ -30,6 +30,11 @@ export const courses = [
     course_name: '数据库系统',
     offering_department: '计算机科学技术学院',
   },
+  {
+    course_id: 402,
+    course_name: '校园学习',
+    offering_department: '计算机科学技术学院',
+  },
 ]
 
 export const events = [

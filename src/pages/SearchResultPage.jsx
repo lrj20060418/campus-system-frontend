@@ -7,16 +7,17 @@ import { paths } from '../routes/paths.js'
 export default function SearchResultPage() {
   const [params] = useSearchParams()
   const q = params.get('q') ?? ''
-  return <SearchResultBody key={q} q={q} />
+  const entity = params.get('entity') ?? 'all'
+  return <SearchResultBody key={`${q}-${entity}`} q={q} entity={entity} />
 }
 
-function SearchResultBody({ q }) {
+function SearchResultBody({ q, entity }) {
   const [loading, setLoading] = useState(true)
   const [items, setItems] = useState([])
 
   useEffect(() => {
     let cancelled = false
-    searchAll(q).then((data) => {
+    searchAll({ q, entity }).then((data) => {
       if (!cancelled) {
         setItems(data)
         setLoading(false)
@@ -25,7 +26,7 @@ function SearchResultBody({ q }) {
     return () => {
       cancelled = true
     }
-  }, [q])
+  }, [q, entity])
 
   return (
     <div className="page">
