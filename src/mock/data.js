@@ -256,12 +256,38 @@ export function deleteEventRow(id) {
   events = events.filter((e) => e.event_id !== nid)
 }
 
-/** 模拟当前用户的查询记录 */
+/** 模拟当前用户 id；接后端后由登录态 / JWT 决定 */
+export const MOCK_CURRENT_USER_ID = 1
+
+function nextQueryRecordId() {
+  if (!queryRecords.length) return 1
+  return Math.max(...queryRecords.map((r) => Number(r.record_id) || 0)) + 1
+}
+
+/** 写入一条查询记录（mock）；后端对齐：POST /api/query-records 或由搜索接口一并返回 */
+export function appendQueryRecordRow(payload) {
+  const row = {
+    record_id: nextQueryRecordId(),
+    user_id: payload.user_id ?? MOCK_CURRENT_USER_ID,
+    query_text: payload.query_text,
+    query_type: payload.query_type,
+    query_time: payload.query_time ?? new Date().toISOString(),
+    status: payload.status,
+    result_count: payload.result_count ?? 0,
+  }
+  queryRecords = [row, ...queryRecords]
+  return row
+}
+
+/** 模拟当前用户的查询记录（新记录在前） */
 export let queryRecords = [
   {
     record_id: 1,
+    user_id: MOCK_CURRENT_USER_ID,
     query_text: '邯郸校区有哪些食堂',
-    query_time: '2026-04-01 10:00',
+    query_time: '2026-04-01T02:00:00.000Z',
     query_type: 'keyword',
+    status: 'success',
+    result_count: 2,
   },
 ]

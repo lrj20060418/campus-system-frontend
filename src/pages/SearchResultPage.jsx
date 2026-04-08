@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { List, Spin } from 'antd'
-import { searchAll } from '../modules/query/api.js'
+import { searchKeywordsWithLog } from '../modules/query/api.js'
 import { paths } from '../routes/paths.js'
 
 export default function SearchResultPage() {
@@ -17,7 +17,7 @@ function SearchResultBody({ q, entity }) {
 
   useEffect(() => {
     let cancelled = false
-    searchAll({ q, entity }).then((data) => {
+    searchKeywordsWithLog({ q, entity }).then((data) => {
       if (!cancelled) {
         setItems(data)
         setLoading(false)

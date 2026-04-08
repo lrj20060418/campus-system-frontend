@@ -6,6 +6,8 @@ import {
   courses,
   events,
   queryRecords,
+  appendQueryRecordRow,
+  MOCK_CURRENT_USER_ID,
 } from '../../mock/data.js'
 
 const ENTITY_TYPES = new Set([
@@ -17,20 +19,54 @@ const ENTITY_TYPES = new Set([
   'event',
 ])
 
-/** 读取查询记录（mock：直接返回内存副本） */
+function normalizeSearchInput(input) {
+  if (typeof input === 'string') {
+    return { q: input, entity: 'all' }
+  }
+  return { q: input?.q, entity: input?.entity ?? 'all' }
+}
+
+/**
+ * 纯检索：不写入查询记录。兼容 searchAll('关键词') 与 searchAll({ q, entity })。
+ */
+export function searchAll(input) {
+  const opts = normalizeSearchInput(input)
+  return Promise.resolve(runKeywordSearch(opts))
+}
+
+/**
+ * 关键词搜索并写入 QueryRecord（与后端「搜索即落库」对齐；mock 在本地插入一条记录）。
+ * 空关键词不写记录、不检索。
+ */
+export function searchKeywordsWithLog({ q, entity }) {
+  const rawQ = (q ?? '').trim()
+  if (!rawQ) {
+    return Promise.resolve([])
+  }
+
+  const out = runKeywordSearch({ q: rawQ, entity })
+
+  appendQueryRecordRow({
+    user_id: MOCK_CURRENT_USER_ID,
+    query_text: rawQ,
+    query_type: 'keyword',
+    status: 'success',
+    result_count: out.length,
+  })
+
+  return Promise.resolve(out)
+}
+
+/** 读取查询记录（mock：直接返回内存副本；后端：GET /api/me/query-records） */
 export function listQueryRecords() {
   return Promise.resolve([...queryRecords])
 }
 
 /**
- * 简单关键词检索：聚合各实体，返回统一结构。
- * @param {string | { q: string, entity?: string }} input - 兼容 searchAll('关键词') 与 searchAll({ q, entity })
+ * 同步执行关键词检索，返回统一列表项结构。
+ * @param {{ q: string, entity?: string }} opts - q 已 trim 的原始字符串（内部再 toLowerCase 匹配）
  */
-export function searchAll(input) {
-  const opts =
-    typeof input === 'string'
-      ? { q: input, entity: 'all' }
-      : { q: input?.q, entity: input?.entity ?? 'all' }
+function runKeywordSearch(opts) {
   const rawQ = (opts.q ?? '').trim()
   const q = rawQ.toLowerCase()
   const entityRaw = String(opts.entity ?? 'all').trim()
@@ -40,7 +76,7 @@ export function searchAll(input) {
       : null
 
   if (!q) {
-    return Promise.resolve([])
+    return []
   }
 
   const out = []
@@ -136,5 +172,5 @@ export function searchAll(input) {
     }
   }
 
-  return Promise.resolve(out)
+  return out
 }
