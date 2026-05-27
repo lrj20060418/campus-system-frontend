@@ -79,3 +79,46 @@
 .home-page h1 {
   margin-bottom: 8px;
 }
+
+.nl-answer {
+  margin-top: 16px;
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 8px;
+}
+
+.markdown-content {
+  color: rgba(0, 0, 0, 0.88);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.markdown-content p {
+  margin: 0 0 0.75em;
+}
+
+.markdown-content p:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-content ul {
+  margin: 0 0 0.75em;
+  padding-left: 1.5em;
+}
+
+.markdown-content li {
+  margin-bottom: 0.35em;
+}
+
+.markdown-content li:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-content strong {
+  font-weight: 600;
+}
+
+.query-record-answer .markdown-content {
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 13px;
+}

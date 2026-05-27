@@ -7,8 +7,28 @@ import {
   removeEvent,
 } from '../../modules/event/api.js'
 import { listBuildings } from '../../modules/building/api.js'
+import { readNamedFieldsFromForm, isFormValidationError } from '../../lib/adminFormValues.js'
 
 const { TextArea } = Input
+
+/** 后端要求合法 datetime，避免空串或过短 */
+function datetimeRules(label) {
+  return [
+    { required: true, message: `请填写${label}` },
+    {
+      validator(_, value) {
+        const s = String(value ?? '').trim()
+        if (!s) return Promise.reject(new Error(`请填写${label}`))
+        if (s.length < 10) {
+          return Promise.reject(
+            new Error(`${label}格式不完整，请使用如 2026-04-10 15:00:00 或 ISO 格式`),
+          )
+        }
+        return Promise.resolve()
+      },
+    },
+  ]
+}
 
 export default function EventAdminTab() {
   const [rows, setRows] = useState([])
@@ -45,13 +65,36 @@ export default function EventAdminTab() {
     setOpen(true)
   }
 
-  async function onFinish(values) {
+  async function handleSubmit() {
     try {
+      await form.validateFields()
+    } catch (e) {
+      if (isFormValidationError(e)) return
+      message.error(e?.message ?? '校验失败')
+      return
+    }
+    try {
+      const raw = readNamedFieldsFromForm(form, [
+        'building_id',
+        'event_name',
+        'start_time',
+        'end_time',
+        'organizer',
+        'description',
+      ])
+      const payload = {
+        building_id: Number(raw.building_id),
+        event_name: String(raw.event_name ?? '').trim(),
+        start_time: String(raw.start_time ?? '').trim(),
+        end_time: String(raw.end_time ?? '').trim(),
+        organizer: String(raw.organizer ?? ''),
+        description: String(raw.description ?? ''),
+      }
       if (editing) {
-        await updateEvent(editing.event_id, values)
+        await updateEvent(editing.event_id, payload)
         message.success('已更新')
       } else {
-        await createEvent(values)
+        await createEvent(payload)
         message.success('已创建')
       }
       setOpen(false)
@@ -125,9 +168,8 @@ export default function EventAdminTab() {
           form.resetFields()
         }}
         footer={null}
-        destroyOnHidden
       >
-        <Form form={form} layout="vertical" onFinish={onFinish}>
+        <Form form={form} layout="vertical">
           <Form.Item
             name="building_id"
             label="举办建筑"
@@ -147,11 +189,11 @@ export default function EventAdminTab() {
           >
             <Input />
           </Form.Item>
-          <Form.Item name="start_time" label="开始时间">
-            <Input placeholder="如 2026-04-10 14:00" />
+          <Form.Item name="start_time" label="开始时间" rules={datetimeRules('开始时间')}>
+            <Input placeholder="如 2026-04-10 15:00:00（须可被后端解析为日期时间）" />
           </Form.Item>
-          <Form.Item name="end_time" label="结束时间">
-            <Input />
+          <Form.Item name="end_time" label="结束时间" rules={datetimeRules('结束时间')}>
+            <Input placeholder="如 2026-04-10 17:00:00" />
           </Form.Item>
           <Form.Item name="organizer" label="主办单位">
             <Input />
@@ -159,7 +201,7 @@ export default function EventAdminTab() {
           <Form.Item name="description" label="说明">
             <TextArea rows={3} />
           </Form.Item>
-          <Button type="primary" htmlType="submit">
+          <Button type="primary" htmlType="button" onClick={handleSubmit}>
             保存
           </Button>
         </Form>

@@ -6,6 +6,7 @@ import {
   updateCourse,
   removeCourse,
 } from '../../modules/course/api.js'
+import { readNamedFieldsFromForm, isFormValidationError } from '../../lib/adminFormValues.js'
 
 export default function CourseAdminTab() {
   const [rows, setRows] = useState([])
@@ -34,13 +35,41 @@ export default function CourseAdminTab() {
     setOpen(true)
   }
 
-  async function onFinish(values) {
+  async function handleSubmit() {
     try {
+      await form.validateFields()
+    } catch (e) {
+      if (isFormValidationError(e)) return
+      message.error(e?.message ?? '校验失败')
+      return
+    }
+    try {
+      const names = [
+        'course_name',
+        'course_id',
+        'offering_department',
+        'semester',
+        'credit',
+      ]
+      const raw = readNamedFieldsFromForm(form, names)
+      const payload = {
+        course_name: String(raw.course_name ?? '').trim(),
+        offering_department: String(raw.offering_department ?? ''),
+        semester: String(raw.semester ?? ''),
+        credit: raw.credit,
+      }
+      const cid = raw.course_id
+      const cidStr = cid != null && String(cid).trim() !== '' ? String(cid).trim() : ''
       if (editing) {
-        await updateCourse(editing.course_id, values)
+        payload.course_id = cidStr || String(editing.course_id ?? '')
+      } else if (cidStr) {
+        payload.course_id = cidStr
+      }
+      if (editing) {
+        await updateCourse(editing.course_id, payload)
         message.success('已更新')
       } else {
-        await createCourse(values)
+        await createCourse(payload)
         message.success('已创建')
       }
       setOpen(false)
@@ -109,15 +138,28 @@ export default function CourseAdminTab() {
           form.resetFields()
         }}
         footer={null}
-        destroyOnHidden
       >
-        <Form form={form} layout="vertical" onFinish={onFinish}>
+        <Form form={form} layout="vertical">
           <Form.Item
             name="course_name"
             label="课程名称"
             rules={[{ required: true, message: '请输入课程名' }]}
           >
             <Input />
+          </Form.Item>
+          <Form.Item
+            name="course_id"
+            label="课程编号"
+            tooltip={
+              editing
+                ? '可修改课程主键；保存后请求体中的 course_id 以此为准（与后端约定一致）'
+                : '若后端要求新建时传入字符串 ID，请填写；留空则提交空字符串 course_id'
+            }
+          >
+            <Input
+              placeholder={editing ? '课程编号' : '可选，与后端约定一致时填写'}
+              allowClear={!editing}
+            />
           </Form.Item>
           <Form.Item name="offering_department" label="开课院系">
             <Input />
@@ -128,7 +170,7 @@ export default function CourseAdminTab() {
           <Form.Item name="credit" label="学分">
             <InputNumber min={0} step={0.5} style={{ width: '100%' }} />
           </Form.Item>
-          <Button type="primary" htmlType="submit">
+          <Button type="primary" htmlType="button" onClick={handleSubmit}>
             保存
           </Button>
         </Form>

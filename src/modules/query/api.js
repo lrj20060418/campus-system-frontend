@@ -5,10 +5,9 @@ import {
   teachers,
   courses,
   events,
-  queryRecords,
-  appendQueryRecordRow,
-  MOCK_CURRENT_USER_ID,
 } from '../../mock/data.js'
+import { getApiBaseUrl } from '../../lib/request.js'
+import { postEntitySearch, asArray } from './entityBackendSearch.js'
 
 const ENTITY_TYPES = new Set([
   'campus',
@@ -27,39 +26,42 @@ function normalizeSearchInput(input) {
 }
 
 /**
- * 纯检索：不写入查询记录。兼容 searchAll('关键词') 与 searchAll({ q, entity })。
+ * 纯检索：不写查询记录。未配置后端时走 mock；配置后端时只调单一 POST /{entity}/search（需 entity≠all）。
  */
-export function searchAll(input) {
+export async function searchAll(input) {
   const opts = normalizeSearchInput(input)
-  return Promise.resolve(runKeywordSearch(opts))
+  const rawQ = (opts.q ?? '').trim()
+  const entityScope = String(opts.entity ?? 'all').trim() || 'all'
+
+  if (getApiBaseUrl()) {
+    if (!rawQ || entityScope === 'all' || !ENTITY_TYPES.has(entityScope)) {
+      return []
+    }
+    return postEntitySearch(entityScope, rawQ)
+  }
+
+  return runKeywordSearch(opts)
 }
 
 /**
- * 关键词搜索并写入 QueryRecord（与后端「搜索即落库」对齐；mock 在本地插入一条记录）。
- * 空关键词不写记录、不检索。
+ * 关键词搜索（不写查询记录；记录仅由自然语言查询页维护）。
  */
-export function searchKeywordsWithLog({ q, entity }) {
+export async function searchKeywordsWithLog({ q, entity }) {
   const rawQ = (q ?? '').trim()
   if (!rawQ) {
-    return Promise.resolve([])
+    return []
   }
 
-  const out = runKeywordSearch({ q: rawQ, entity })
+  const entityScope = String(entity ?? 'all').trim() || 'all'
 
-  appendQueryRecordRow({
-    user_id: MOCK_CURRENT_USER_ID,
-    query_text: rawQ,
-    query_type: 'keyword',
-    status: 'success',
-    result_count: out.length,
-  })
+  if (getApiBaseUrl()) {
+    if (entityScope === 'all' || !ENTITY_TYPES.has(entityScope)) {
+      return []
+    }
+    return postEntitySearch(entityScope, rawQ)
+  }
 
-  return Promise.resolve(out)
-}
-
-/** 读取查询记录（mock：直接返回内存副本；后端：GET /api/me/query-records） */
-export function listQueryRecords() {
-  return Promise.resolve([...queryRecords])
+  return runKeywordSearch({ q: rawQ, entity })
 }
 
 /**

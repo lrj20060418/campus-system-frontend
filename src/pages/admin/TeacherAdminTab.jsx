@@ -6,6 +6,7 @@ import {
   updateTeacher,
   removeTeacher,
 } from '../../modules/teacher/api.js'
+import { readNamedFieldsFromForm, isFormValidationError } from '../../lib/adminFormValues.js'
 
 export default function TeacherAdminTab() {
   const [rows, setRows] = useState([])
@@ -31,13 +32,26 @@ export default function TeacherAdminTab() {
     setOpen(true)
   }
 
-  async function onFinish(values) {
+  async function handleSubmit() {
     try {
+      await form.validateFields()
+    } catch (e) {
+      if (isFormValidationError(e)) return
+      message.error(e?.message ?? '校验失败')
+      return
+    }
+    try {
+      const raw = readNamedFieldsFromForm(form, ['teacher_name', 'department', 'email'])
+      const payload = {
+        teacher_name: String(raw.teacher_name ?? '').trim(),
+        department: String(raw.department ?? ''),
+        email: String(raw.email ?? ''),
+      }
       if (editing) {
-        await updateTeacher(editing.teacher_id, values)
+        await updateTeacher(editing.teacher_id, payload)
         message.success('已更新')
       } else {
-        await createTeacher(values)
+        await createTeacher(payload)
         message.success('已创建')
       }
       setOpen(false)
@@ -105,9 +119,8 @@ export default function TeacherAdminTab() {
           form.resetFields()
         }}
         footer={null}
-        destroyOnHidden
       >
-        <Form form={form} layout="vertical" onFinish={onFinish}>
+        <Form form={form} layout="vertical">
           <Form.Item
             name="teacher_name"
             label="姓名"
@@ -121,7 +134,7 @@ export default function TeacherAdminTab() {
           <Form.Item name="email" label="邮箱">
             <Input type="email" />
           </Form.Item>
-          <Button type="primary" htmlType="submit">
+          <Button type="primary" htmlType="button" onClick={handleSubmit}>
             保存
           </Button>
         </Form>

@@ -7,6 +7,28 @@ import {
   removeBuilding,
 } from '../../modules/building/api.js'
 import { listCampuses } from '../../modules/campus/api.js'
+import { readNamedFieldsFromForm, isFormValidationError } from '../../lib/adminFormValues.js'
+
+/** 与后端 building_type 枚举一致 */
+const BUILDING_TYPE_OPTIONS = [
+  { value: '教学楼', label: '教学楼' },
+  { value: '宿舍楼', label: '宿舍楼' },
+  { value: '办公楼', label: '办公楼' },
+  { value: '实验楼', label: '实验楼' },
+  { value: '体育馆', label: '体育馆' },
+  { value: '食堂', label: '食堂' },
+  { value: '图书馆', label: '图书馆' },
+  { value: '其他', label: '其他' },
+]
+
+const BUILDING_TYPE_SET = new Set(BUILDING_TYPE_OPTIONS.map((o) => o.value))
+
+function normalizeBuildingTypeForForm(raw) {
+  let t = String(raw ?? '').trim()
+  if (t === '办公') t = '办公楼'
+  if (BUILDING_TYPE_SET.has(t)) return t
+  return undefined
+}
 
 export default function BuildingAdminTab() {
   const [rows, setRows] = useState([])
@@ -39,17 +61,33 @@ export default function BuildingAdminTab() {
 
   function openEdit(record) {
     setEditing(record)
-    form.setFieldsValue(record)
+    form.setFieldsValue({
+      ...record,
+      building_type: normalizeBuildingTypeForForm(record.building_type),
+    })
     setOpen(true)
   }
 
-  async function onFinish(values) {
+  async function handleSubmit() {
     try {
+      await form.validateFields()
+    } catch (e) {
+      if (isFormValidationError(e)) return
+      message.error(e?.message ?? '校验失败')
+      return
+    }
+    try {
+      const raw = readNamedFieldsFromForm(form, ['campus_id', 'building_name', 'building_type'])
+      const payload = {
+        campus_id: Number(raw.campus_id),
+        building_name: String(raw.building_name ?? '').trim(),
+        building_type: raw.building_type,
+      }
       if (editing) {
-        await updateBuilding(editing.building_id, values)
+        await updateBuilding(editing.building_id, payload)
         message.success('已更新')
       } else {
-        await createBuilding(values)
+        await createBuilding(payload)
         message.success('已创建')
       }
       setOpen(false)
@@ -122,9 +160,8 @@ export default function BuildingAdminTab() {
           form.resetFields()
         }}
         footer={null}
-        destroyOnHidden
       >
-        <Form form={form} layout="vertical" onFinish={onFinish}>
+        <Form form={form} layout="vertical">
           <Form.Item
             name="campus_id"
             label="所属校区"
@@ -147,11 +184,11 @@ export default function BuildingAdminTab() {
           <Form.Item
             name="building_type"
             label="建筑类型"
-            rules={[{ required: true, message: '请输入类型' }]}
+            rules={[{ required: true, message: '请选择建筑类型' }]}
           >
-            <Input placeholder="如：教学楼、宿舍、餐饮" />
+            <Select placeholder="请选择" options={BUILDING_TYPE_OPTIONS} />
           </Form.Item>
-          <Button type="primary" htmlType="submit">
+          <Button type="primary" htmlType="button" onClick={handleSubmit}>
             保存
           </Button>
         </Form>

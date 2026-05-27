@@ -11,7 +11,7 @@ const { Text } = Typography
 export default function AdminPage() {
   return (
     <div className="page">
-      <h2>管理后台（mock CRUD）</h2>
+      <h2>管理后台</h2>
       <Text type="secondary">
         数据通过 <code>modules/*/api.js</code> 读写；接后端时只需替换各模块 api 实现，页面可保持不变。
       </Text>

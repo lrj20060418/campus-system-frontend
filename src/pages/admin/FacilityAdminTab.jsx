@@ -7,6 +7,7 @@ import {
   removeFacility,
 } from '../../modules/facility/api.js'
 import { listBuildings } from '../../modules/building/api.js'
+import { readNamedFieldsFromForm, isFormValidationError } from '../../lib/adminFormValues.js'
 
 export default function FacilityAdminTab() {
   const [rows, setRows] = useState([])
@@ -39,17 +40,41 @@ export default function FacilityAdminTab() {
 
   function openEdit(record) {
     setEditing(record)
-    form.setFieldsValue(record)
+    form.setFieldsValue({
+      ...record,
+      open_time: record.open_time ?? record.openTime ?? '',
+    })
     setOpen(true)
   }
 
-  async function onFinish(values) {
+  async function handleSubmit() {
     try {
+      await form.validateFields()
+    } catch (e) {
+      if (isFormValidationError(e)) return
+      message.error(e?.message ?? '校验失败')
+      return
+    }
+    try {
+      const raw = readNamedFieldsFromForm(form, [
+        'building_id',
+        'facility_name',
+        'facility_type',
+        'open_time',
+        'floor',
+      ])
+      const payload = {
+        building_id: Number(raw.building_id),
+        facility_name: String(raw.facility_name ?? '').trim(),
+        facility_type: String(raw.facility_type ?? '').trim(),
+        open_time: String(raw.open_time ?? ''),
+        floor: String(raw.floor ?? ''),
+      }
       if (editing) {
-        await updateFacility(editing.facility_id, values)
+        await updateFacility(editing.facility_id, payload)
         message.success('已更新')
       } else {
-        await createFacility(values)
+        await createFacility(payload)
         message.success('已创建')
       }
       setOpen(false)
@@ -123,9 +148,8 @@ export default function FacilityAdminTab() {
           form.resetFields()
         }}
         footer={null}
-        destroyOnHidden
       >
-        <Form form={form} layout="vertical" onFinish={onFinish}>
+        <Form form={form} layout="vertical">
           <Form.Item
             name="building_id"
             label="所属建筑"
@@ -158,7 +182,7 @@ export default function FacilityAdminTab() {
           <Form.Item name="floor" label="楼层">
             <Input />
           </Form.Item>
-          <Button type="primary" htmlType="submit">
+          <Button type="primary" htmlType="button" onClick={handleSubmit}>
             保存
           </Button>
         </Form>

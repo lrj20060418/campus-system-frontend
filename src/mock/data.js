@@ -1,5 +1,124 @@
 /** 集中存放 mock 数据；通过下方 Row 函数变更，便于与后端 api 层对齐后替换实现 */
 
+/**
+ * 预置账号（mock 明文密码，仅演示）：
+ * - 普通用户：用户名 user / 密码 user123
+ * - 管理员：用户名 admin / 密码 admin123
+ */
+export let mockUsers = [
+  {
+    user_id: 1,
+    username: 'user',
+    password: 'user123',
+    role: 'user',
+    created_at: '2026-01-15T08:00:00.000Z',
+  },
+  {
+    user_id: 2,
+    username: 'admin',
+    password: 'admin123',
+    role: 'admin',
+    created_at: '2026-01-10T08:00:00.000Z',
+  },
+]
+
+/** 当前登录会话（接后端后由 token 解析或 Cookie 同步） */
+export let mockSession = {
+  userId: null,
+  token: null,
+}
+
+export function getActiveUserId() {
+  return mockSession.userId
+}
+
+export function setMockSession(userId, token) {
+  mockSession.userId = userId
+  mockSession.token = token
+}
+
+export function clearMockSession() {
+  mockSession.userId = null
+  mockSession.token = null
+}
+
+import { STORAGE_USER_ID_KEY, STORAGE_USER_JSON_KEY } from '../lib/authStorage.js'
+
+/** 用 localStorage 里的 token 恢复会话（mock token 形如 mock-<userId>；真实 JWT 需配合 campus_user_id） */
+export function syncMockSessionFromToken(token) {
+  if (!token || typeof token !== 'string') {
+    if (typeof localStorage === 'undefined') {
+      clearMockSession()
+      return
+    }
+    // 后端仅返回用户信息、无 JWT 时：凭 campus_user_id + 缓存用户 JSON 恢复内存会话
+    const sid = localStorage.getItem(STORAGE_USER_ID_KEY)
+    const hasUserJson = localStorage.getItem(STORAGE_USER_JSON_KEY)
+    if (sid != null && sid !== '' && hasUserJson) {
+      mockSession.userId = Number(sid)
+      mockSession.token = null
+      return
+    }
+    clearMockSession()
+    return
+  }
+  if (token.startsWith('mock-')) {
+    const id = Number(token.slice('mock-'.length))
+    const u = mockUsers.find((x) => x.user_id === id)
+    if (u) {
+      mockSession.userId = id
+      mockSession.token = token
+    } else {
+      clearMockSession()
+    }
+    return
+  }
+  if (typeof localStorage === 'undefined') {
+    clearMockSession()
+    return
+  }
+  const sid = localStorage.getItem(STORAGE_USER_ID_KEY)
+  if (sid != null && sid !== '') {
+    mockSession.userId = Number(sid)
+    mockSession.token = token
+  } else {
+    clearMockSession()
+  }
+}
+
+export function findMockUserByCredentials(username, password) {
+  return (
+    mockUsers.find(
+      (u) => u.username === username && u.password === password,
+    ) ?? null
+  )
+}
+
+/** 无后端时本地演示注册（用户名不可重复）；role 默认 user，管理员页可传 admin */
+export function registerMockUser(username, password, role = 'user') {
+  const name = String(username ?? '').trim()
+  if (!name) throw new Error('请输入用户名')
+  if (mockUsers.some((u) => u.username === name)) {
+    throw new Error('用户名已存在')
+  }
+  const user_id = nextIdFor(mockUsers, 'user_id')
+  const r = role === 'admin' ? 'admin' : 'user'
+  const row = {
+    user_id,
+    username: name,
+    password: String(password ?? ''),
+    role: r,
+    created_at: new Date().toISOString(),
+  }
+  mockUsers.push(row)
+  return row
+}
+
+export function getMockUserById(userId) {
+  const id = Number(userId)
+  return mockUsers.find((u) => u.user_id === id) ?? null
+}
+
 function nextIdFor(rows, key) {
   if (!rows.length) return 1
   return Math.max(...rows.map((r) => Number(r[key]) || 0)) + 1
@@ -205,7 +324,15 @@ export function updateCourseRow(id, payload) {
   const nid = Number(id)
   courses = courses.map((c) => {
     if (c.course_id !== nid) return c
-    const merged = { ...c, ...payload, course_id: nid }
+    const merged = { ...c, ...payload }
+    if (Object.prototype.hasOwnProperty.call(payload, 'course_id')) {
+      const raw = payload.course_id
+      const next =
+        raw != null && String(raw).trim() !== '' ? Number(String(raw).trim()) : nid
+      merged.course_id = Number.isFinite(next) ? next : nid
+    } else {
+      merged.course_id = nid
+    }
     if (Object.prototype.hasOwnProperty.call(payload, 'credit')) {
       const creditRaw = payload.credit
       merged.credit =
@@ -256,9 +383,6 @@ export function deleteEventRow(id) {
   events = events.filter((e) => e.event_id !== nid)
 }
 
-/** 模拟当前用户 id；接后端后由登录态 / JWT 决定 */
-export const MOCK_CURRENT_USER_ID = 1
-
 function nextQueryRecordId() {
   if (!queryRecords.length) return 1
   return Math.max(...queryRecords.map((r) => Number(r.record_id) || 0)) + 1
@@ -266,28 +390,69 @@ function nextQueryRecordId() {
 
 /** 写入一条查询记录（mock）；后端对齐：POST /api/query-records 或由搜索接口一并返回 */
 export function appendQueryRecordRow(payload) {
+  const uid = payload.user_id ?? getActiveUserId()
+  if (uid == null) {
+    throw new Error('写入查询记录失败：当前未登录')
+  }
   const row = {
     record_id: nextQueryRecordId(),
-    user_id: payload.user_id ?? MOCK_CURRENT_USER_ID,
+    user_id: uid,
     query_text: payload.query_text,
     query_type: payload.query_type,
     query_time: payload.query_time ?? new Date().toISOString(),
     status: payload.status,
     result_count: payload.result_count ?? 0,
+    entity_scope: payload.entity_scope ?? 'all',
+    answer: payload.answer ?? '',
   }
   queryRecords = [row, ...queryRecords]
   return row
 }
 
-/** 模拟当前用户的查询记录（新记录在前） */
+export function updateQueryRecordRow(id, payload) {
+  const nid = Number(id)
+  const idx = queryRecords.findIndex(
+    (r) => Number(r.record_id ?? r.id) === nid,
+  )
+  if (idx === -1) throw new Error('记录不存在')
+  const next = { ...queryRecords[idx], ...payload, record_id: nid }
+  queryRecords = [
+    ...queryRecords.slice(0, idx),
+    next,
+    ...queryRecords.slice(idx + 1),
+  ]
+  return next
+}
+
+export function deleteQueryRecordRow(id) {
+  const nid = Number(id)
+  const before = queryRecords.length
+  queryRecords = queryRecords.filter(
+    (r) => Number(r.record_id ?? r.id) !== nid,
+  )
+  if (queryRecords.length === before) {
+    throw new Error('记录不存在')
+  }
+}
+
+/** 模拟查询记录（新记录在前）；每条带 user_id 便于按用户过滤 */
 export let queryRecords = [
   {
     record_id: 1,
-    user_id: MOCK_CURRENT_USER_ID,
-    query_text: '邯郸校区有哪些食堂',
+    user_id: 1,
+    query_text: '邯郸校区有哪些教学楼',
     query_time: '2026-04-01T02:00:00.000Z',
-    query_type: 'keyword',
+    query_type: 'natural_language',
     status: 'success',
-    result_count: 2,
+    answer: '邯郸校区的教学楼包括光华楼、理科楼、文科楼。',
+  },
+  {
+    record_id: 2,
+    user_id: 2,
+    query_text: '江湾校区有哪些建筑',
+    query_time: '2026-04-02T03:00:00.000Z',
+    query_type: 'natural_language',
+    status: 'success',
+    answer: '（示例）江湾校区主要建筑可在管理后台查看。',
   },
 ]

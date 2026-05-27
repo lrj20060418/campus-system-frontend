@@ -6,6 +6,7 @@ import {
   updateCampus,
   removeCampus,
 } from '../../modules/campus/api.js'
+import { readNamedFieldsFromForm, isFormValidationError } from '../../lib/adminFormValues.js'
 
 export default function CampusAdminTab() {
   const [rows, setRows] = useState([])
@@ -27,17 +28,32 @@ export default function CampusAdminTab() {
 
   function openEdit(record) {
     setEditing(record)
-    form.setFieldsValue(record)
+    form.setFieldsValue({
+      ...record,
+      address: record.address ?? record.campus_address ?? record.adrress ?? record.Address ?? '',
+    })
     setOpen(true)
   }
 
-  async function onFinish(values) {
+  async function handleSubmit() {
     try {
+      await form.validateFields()
+    } catch (e) {
+      if (isFormValidationError(e)) return
+      message.error(e?.message ?? '校验失败')
+      return
+    }
+    try {
+      const raw = readNamedFieldsFromForm(form, ['campus_name', 'address'])
+      const payload = {
+        campus_name: String(raw.campus_name ?? '').trim(),
+        address: String(raw.address ?? ''),
+      }
       if (editing) {
-        await updateCampus(editing.campus_id, values)
+        await updateCampus(editing.campus_id, payload)
         message.success('已更新')
       } else {
-        await createCampus(values)
+        await createCampus(payload)
         message.success('已创建')
       }
       setOpen(false)
@@ -105,9 +121,8 @@ export default function CampusAdminTab() {
           form.resetFields()
         }}
         footer={null}
-        destroyOnHidden
       >
-        <Form form={form} layout="vertical" onFinish={onFinish}>
+        <Form form={form} layout="vertical">
           <Form.Item
             name="campus_name"
             label="校区名称"
@@ -118,7 +133,7 @@ export default function CampusAdminTab() {
           <Form.Item name="address" label="地址">
             <Input />
           </Form.Item>
-          <Button type="primary" htmlType="submit">
+          <Button type="primary" htmlType="button" onClick={handleSubmit}>
             保存
           </Button>
         </Form>

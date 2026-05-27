@@ -4,30 +4,54 @@ import {
   updateTeacherRow,
   deleteTeacherRow,
 } from '../../mock/data.js'
+import { getApiBaseUrl } from '../../lib/request.js'
+import { fetchEntityDetail, normalizeDetailRow } from '../../lib/entityFilterDetail.js'
+import {
+  listEntityRowsAdmin,
+  uploadEntityRow,
+  updateEntityRow,
+  removeEntityRow,
+} from '../../lib/entityAdminApi.js'
 
-export function listTeachers() {
-  return Promise.resolve([...teachers])
+const ENTITY = 'teacher'
+
+export async function listTeachers() {
+  if (getApiBaseUrl()) {
+    return listEntityRowsAdmin(ENTITY)
+  }
+  return [...teachers]
 }
 
-export function getTeacher(teacherId) {
+export async function getTeacher(teacherId) {
+  if (getApiBaseUrl()) {
+    const row = await fetchEntityDetail(ENTITY, teacherId)
+    return normalizeDetailRow(ENTITY, row)
+  }
   const id = Number(teacherId)
-  return Promise.resolve(teachers.find((t) => t.teacher_id === id) ?? null)
+  return teachers.find((t) => t.teacher_id === id) ?? null
 }
 
-/** POST /api/teachers */
-export function createTeacher(payload) {
-  const row = createTeacherRow(payload)
-  return Promise.resolve(row)
+export async function createTeacher(payload) {
+  if (getApiBaseUrl()) {
+    const row = await uploadEntityRow(ENTITY, { ...payload })
+    return normalizeDetailRow(ENTITY, row)
+  }
+  return createTeacherRow(payload)
 }
 
-/** PATCH /api/teachers/:id */
-export function updateTeacher(id, payload) {
+export async function updateTeacher(id, payload) {
+  if (getApiBaseUrl()) {
+    await updateEntityRow(ENTITY, id, payload)
+    return getTeacher(id)
+  }
   updateTeacherRow(id, payload)
   return getTeacher(id)
 }
 
-/** DELETE /api/teachers/:id */
-export function removeTeacher(id) {
+export async function removeTeacher(id) {
+  if (getApiBaseUrl()) {
+    await removeEntityRow(ENTITY, id)
+    return
+  }
   deleteTeacherRow(id)
-  return Promise.resolve()
 }
