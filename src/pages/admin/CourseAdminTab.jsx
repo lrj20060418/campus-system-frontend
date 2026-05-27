@@ -7,6 +7,7 @@ import {
   removeCourse,
 } from '../../modules/course/api.js'
 import { readNamedFieldsFromForm, isFormValidationError } from '../../lib/adminFormValues.js'
+import { readEntityPrimaryId } from '../../lib/entityFilterDetail.js'
 
 export default function CourseAdminTab() {
   const [rows, setRows] = useState([])
@@ -48,14 +49,12 @@ export default function CourseAdminTab() {
         'course_name',
         'course_id',
         'offering_department',
-        'semester',
         'credit',
       ]
       const raw = readNamedFieldsFromForm(form, names)
       const payload = {
         course_name: String(raw.course_name ?? '').trim(),
         offering_department: String(raw.offering_department ?? ''),
-        semester: String(raw.semester ?? ''),
         credit: raw.credit,
       }
       const cid = raw.course_id
@@ -86,7 +85,12 @@ export default function CourseAdminTab() {
       title: '确认删除该课程？',
       onOk: async () => {
         try {
-          await removeCourse(record.course_id)
+          const cid = readEntityPrimaryId(record, 'course')
+          if (!cid) {
+            message.error('无法识别课程编号')
+            return
+          }
+          await removeCourse(cid)
           message.success('已删除')
           load()
         } catch (e) {
@@ -110,7 +114,6 @@ export default function CourseAdminTab() {
           { title: 'ID', dataIndex: 'course_id', width: 72 },
           { title: '课程名', dataIndex: 'course_name' },
           { title: '开课院系', dataIndex: 'offering_department' },
-          { title: '学期', dataIndex: 'semester' },
           { title: '学分', dataIndex: 'credit' },
           {
             title: '操作',
@@ -150,22 +153,12 @@ export default function CourseAdminTab() {
           <Form.Item
             name="course_id"
             label="课程编号"
-            tooltip={
-              editing
-                ? '可修改课程主键；保存后请求体中的 course_id 以此为准（与后端约定一致）'
-                : '若后端要求新建时传入字符串 ID，请填写；留空则提交空字符串 course_id'
-            }
+            rules={[{ required: true, message: '请输入课程编号' }]}
           >
-            <Input
-              placeholder={editing ? '课程编号' : '可选，与后端约定一致时填写'}
-              allowClear={!editing}
-            />
+            <Input />
           </Form.Item>
           <Form.Item name="offering_department" label="开课院系">
             <Input />
-          </Form.Item>
-          <Form.Item name="semester" label="学期">
-            <Input placeholder="如 2025-2026-2" />
           </Form.Item>
           <Form.Item name="credit" label="学分">
             <InputNumber min={0} step={0.5} style={{ width: '100%' }} />

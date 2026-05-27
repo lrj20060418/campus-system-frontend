@@ -5,9 +5,11 @@ import {
   teachers,
   courses,
   events,
+  teaches,
 } from '../../mock/data.js'
 import { getApiBaseUrl } from '../../lib/request.js'
-import { postEntitySearch, asArray } from './entityBackendSearch.js'
+import { formatTeachRouteId } from '../../lib/teachKeys.js'
+import { postEntitySearch, postTeachFilterSearch } from './entityBackendSearch.js'
 
 const ENTITY_TYPES = new Set([
   'campus',
@@ -16,13 +18,18 @@ const ENTITY_TYPES = new Set([
   'teacher',
   'course',
   'event',
+  'teach',
 ])
 
 function normalizeSearchInput(input) {
   if (typeof input === 'string') {
-    return { q: input, entity: 'all' }
+    return { q: input, entity: 'all', teachField: 'teacher_name' }
   }
-  return { q: input?.q, entity: input?.entity ?? 'all' }
+  return {
+    q: input?.q,
+    entity: input?.entity ?? 'all',
+    teachField: input?.teachField ?? 'teacher_name',
+  }
 }
 
 /**
@@ -37,6 +44,9 @@ export async function searchAll(input) {
     if (!rawQ || entityScope === 'all' || !ENTITY_TYPES.has(entityScope)) {
       return []
     }
+    if (entityScope === 'teach') {
+      return postTeachFilterSearch(rawQ, opts.teachField)
+    }
     return postEntitySearch(entityScope, rawQ)
   }
 
@@ -46,22 +56,26 @@ export async function searchAll(input) {
 /**
  * 关键词搜索（不写查询记录；记录仅由自然语言查询页维护）。
  */
-export async function searchKeywordsWithLog({ q, entity }) {
+export async function searchKeywordsWithLog({ q, entity, teachField }) {
   const rawQ = (q ?? '').trim()
   if (!rawQ) {
     return []
   }
 
   const entityScope = String(entity ?? 'all').trim() || 'all'
+  const teachFieldScope = String(teachField ?? 'teacher_name').trim() || 'teacher_name'
 
   if (getApiBaseUrl()) {
     if (entityScope === 'all' || !ENTITY_TYPES.has(entityScope)) {
       return []
     }
+    if (entityScope === 'teach') {
+      return postTeachFilterSearch(rawQ, teachFieldScope)
+    }
     return postEntitySearch(entityScope, rawQ)
   }
 
-  return runKeywordSearch({ q: rawQ, entity })
+  return runKeywordSearch({ q: rawQ, entity, teachField: teachFieldScope })
 }
 
 /**
@@ -169,6 +183,37 @@ function runKeywordSearch(opts) {
           id: e.event_id,
           title: e.event_name,
           subtitle: e.start_time,
+        })
+      }
+    }
+  }
+  if (!entityFilter || entityFilter === 'teach') {
+    const teachField = String(opts.teachField ?? 'teacher_name').trim() || 'teacher_name'
+    for (const t of teaches) {
+      const teacher = teachers.find((tr) => tr.teacher_id === t.teacher_id)
+      const course = courses.find(
+        (c) => String(c.course_id).trim() === String(t.course_id).trim(),
+      )
+      const teacher_name = teacher?.teacher_name ?? ''
+      const course_name = course?.course_name ?? ''
+      let matched = false
+      if (teachField === 'semester') {
+        matched = String(t.semester ?? '').toLowerCase().includes(q)
+      } else if (teachField === 'course_name') {
+        matched =
+          course_name.toLowerCase().includes(q) ||
+          String(t.course_id).toLowerCase().includes(q)
+      } else {
+        matched = teacher_name.toLowerCase().includes(q)
+      }
+      if (matched) {
+        out.push({
+          entity: 'teach',
+          id: formatTeachRouteId(t),
+          title: `${course_name || t.course_id} · ${t.semester} · 班${t.section_no}`,
+          subtitle: teacher_name
+            ? `${teacher_name} · ${t.teach_role}`
+            : t.teach_role,
         })
       }
     }

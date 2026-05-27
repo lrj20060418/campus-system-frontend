@@ -1,8 +1,13 @@
 import { request } from '../../lib/request.js'
 import { buildEntitySearchBody } from '../../config/apiPaths.js'
+import { normalizeCourseIdScalar } from '../../lib/entityFilterDetail.js'
+import { formatTeachRouteId, buildTeachHomeFilterBody } from '../../lib/teachKeys.js'
 
-/** 把后端一行映射成前端搜索列表项（与 mock runKeywordSearch 输出一致） */
-function mapRow(entity, row) {
+const ENTITY_FILTER_PATH =
+  import.meta.env.VITE_ENTITY_FILTER_PATH ?? '/filter'
+
+/** 把后端一行映射成前端搜索/筛选列表项 */
+export function mapEntityRowToListItem(entity, row) {
   if (!row || typeof row !== 'object') return null
   switch (entity) {
     case 'campus':
@@ -33,13 +38,17 @@ function mapRow(entity, row) {
         title: row.teacher_name,
         subtitle: row.department,
       }
-    case 'course':
+    case 'course': {
+      const courseId = normalizeCourseIdScalar(
+        row.course_id ?? row.courseId,
+      )
       return {
         entity: 'course',
-        id: row.course_id,
+        id: courseId || row.course_id,
         title: row.course_name,
         subtitle: row.offering_department,
       }
+    }
     case 'event':
       return {
         entity: 'event',
@@ -47,6 +56,26 @@ function mapRow(entity, row) {
         title: row.event_name,
         subtitle: row.organizer ?? row.start_time,
       }
+    case 'teach': {
+      const id = formatTeachRouteId(row)
+      if (!id || id.includes('NaN')) return null
+      const titleParts = [
+        row.course_name || row.course_id,
+        row.semester,
+        row.section_no != null && String(row.section_no).trim() !== ''
+          ? `班${row.section_no}`
+          : null,
+      ].filter(Boolean)
+      const subtitleParts = [row.teacher_name, row.teach_role].filter(
+        (x) => x != null && String(x).trim() !== '',
+      )
+      return {
+        entity: 'teach',
+        id,
+        title: titleParts.join(' · ') || '授课记录',
+        subtitle: subtitleParts.join(' · '),
+      }
+    }
     default:
       return null
   }
@@ -78,5 +107,20 @@ export async function postEntitySearch(entity, keyword) {
     json: buildEntitySearchBody(entity, keyword),
   })
   const rows = asArray(raw)
-  return rows.map((r) => mapRow(entity, r)).filter(Boolean)
+  return rows
+    .map((r) => mapEntityRowToListItem(entity, r))
+    .filter((item) => item && item.id != null && String(item.id).trim() !== '')
+}
+
+/** 授课首页搜索：POST /teach/filter，body 含 teacher_name / course_name / semester */
+export async function postTeachFilterSearch(keyword, field) {
+  const path = `/teach${ENTITY_FILTER_PATH}`
+  const raw = await request(path, {
+    method: 'POST',
+    json: buildTeachHomeFilterBody(keyword, field),
+  })
+  const rows = asArray(raw)
+  return rows
+    .map((r) => mapEntityRowToListItem('teach', r))
+    .filter((item) => item && item.id != null && String(item.id).trim() !== '')
 }

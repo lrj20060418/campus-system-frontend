@@ -4,15 +4,24 @@ import { Alert, List, Spin } from 'antd'
 import { searchKeywordsWithLog } from '../modules/query/api.js'
 import { paths } from '../routes/paths.js'
 import { getApiBaseUrl } from '../lib/request.js'
+import { TEACH_HOME_FILTER_FIELDS } from '../lib/teachKeys.js'
 
 export default function SearchResultPage() {
   const [params] = useSearchParams()
   const q = params.get('q') ?? ''
   const entity = params.get('entity') ?? 'all'
-  return <SearchResultBody key={`${q}-${entity}`} q={q} entity={entity} />
+  const teachField = params.get('teachField') ?? 'teacher_name'
+  return (
+    <SearchResultBody
+      key={`${q}-${entity}-${teachField}`}
+      q={q}
+      entity={entity}
+      teachField={teachField}
+    />
+  )
 }
 
-function SearchResultBody({ q, entity }) {
+function SearchResultBody({ q, entity, teachField }) {
   const [loading, setLoading] = useState(true)
   const [items, setItems] = useState([])
   const [error, setError] = useState('')
@@ -22,7 +31,7 @@ function SearchResultBody({ q, entity }) {
     let cancelled = false
     setError('')
     setLoading(true)
-    searchKeywordsWithLog({ q, entity })
+    searchKeywordsWithLog({ q, entity, teachField })
       .then((data) => {
         if (!cancelled) {
           setItems(data)
@@ -39,7 +48,12 @@ function SearchResultBody({ q, entity }) {
     return () => {
       cancelled = true
     }
-  }, [q, entity])
+  }, [q, entity, teachField])
+
+  const teachFieldLabel =
+    entity === 'teach'
+      ? TEACH_HOME_FILTER_FIELDS.find((o) => o.value === teachField)?.label
+      : null
 
   const needEntityHint =
     useBackend && (entity === 'all' || !entity)
@@ -50,17 +64,18 @@ function SearchResultBody({ q, entity }) {
       <p className="muted">
         关键词：{q || '（空）'}
         {entity && entity !== 'all' ? ` · 类型：${entity}` : null}
+        {teachFieldLabel ? ` · 按${teachFieldLabel}` : null}
       </p>
       {needEntityHint ? (
         <Alert
           type="warning"
           showIcon
           style={{ marginBottom: 16 }}
-          message="已连接后端时，请先在首页选择具体类型（如校区），再搜索。"
+          title="请先在首页选择具体类型（如校区），再搜索。"
         />
       ) : null}
       {error ? (
-        <Alert type="error" message={error} showIcon style={{ marginBottom: 16 }} />
+        <Alert type="error" title={error} showIcon style={{ marginBottom: 16 }} />
       ) : null}
       <Spin spinning={loading}>
         <List

@@ -2,6 +2,7 @@ import { BrowserRouter, Link, Navigate, Route, Routes } from 'react-router-dom'
 import { Button, Layout, Menu, Spin } from 'antd'
 import HomePage from './pages/HomePage.jsx'
 import SearchResultPage from './pages/SearchResultPage.jsx'
+import FilterPage from './pages/FilterPage.jsx'
 import DetailPage from './pages/DetailPage.jsx'
 import AdminPage from './pages/AdminPage.jsx'
 import NaturalLanguagePage from './pages/NaturalLanguagePage.jsx'
@@ -19,7 +20,10 @@ const { Header, Content, Footer } = Layout
 function AppShell() {
   const { user, ready, logout } = useAuth()
 
-  const menuItems = [{ key: 'home', label: <Link to={paths.home}>首页</Link> }]
+  const menuItems = [
+    { key: 'home', label: <Link to={paths.home}>首页</Link> },
+    { key: 'filter', label: <Link to={paths.filter}>高级筛选</Link> },
+  ]
 
   if (user) {
     menuItems.push(
@@ -71,6 +75,7 @@ function AppShell() {
         <Routes>
           <Route path={paths.home} element={<HomePage />} />
           <Route path={paths.search} element={<SearchResultPage />} />
+          <Route path={paths.filter} element={<FilterPage />} />
           <Route path="/detail/:entity/:id" element={<DetailPage />} />
           <Route path={paths.login} element={<LoginPage />} />
           <Route path={paths.adminRegister} element={<AdminRegisterPage />} />

@@ -97,7 +97,7 @@ export default function NaturalLanguagePage() {
       </Button>
 
       {queryError ? (
-        <Alert type="error" message={queryError} showIcon style={{ marginTop: 16 }} />
+        <Alert type="error" title={queryError} showIcon style={{ marginTop: 16 }} />
       ) : null}
 
       <Spin spinning={querying}>

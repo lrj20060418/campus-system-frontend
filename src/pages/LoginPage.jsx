@@ -166,7 +166,7 @@ export default function LoginPage() {
 
                     type="error"
 
-                    message={err}
+                    title={err}
 
                     showIcon
 
@@ -182,7 +182,7 @@ export default function LoginPage() {
 
                     type="success"
 
-                    message={okMsg}
+                    title={okMsg}
 
                     showIcon
 
@@ -268,7 +268,7 @@ export default function LoginPage() {
 
                     type="error"
 
-                    message={err}
+                    title={err}
 
                     showIcon
 

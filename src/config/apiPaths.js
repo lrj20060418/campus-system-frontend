@@ -32,6 +32,7 @@ export const ENTITY_API_NAMES = [
   'teacher',
   'course',
   'event',
+  'teach',
 ]
 
 /**

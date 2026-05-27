@@ -14,6 +14,7 @@ const ENTITY_SCOPE_LABEL = {
   teacher: '教师',
   course: '课程',
   event: '活动',
+  teach: '授课',
 }
 
 function entityScopeLabel(scope) {

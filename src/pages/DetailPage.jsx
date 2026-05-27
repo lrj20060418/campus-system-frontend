@@ -7,6 +7,7 @@ import { getFacility } from '../modules/facility/api.js'
 import { getTeacher } from '../modules/teacher/api.js'
 import { getCourse } from '../modules/course/api.js'
 import { getEvent } from '../modules/event/api.js'
+import { getTeach } from '../modules/teach/api.js'
 import CampusTag from '../modules/campus/CampusTag.jsx'
 import { paths } from '../routes/paths.js'
 
@@ -31,6 +32,8 @@ async function loadDetail(entity, id) {
       return getCourse(id)
     case 'event':
       return getEvent(id)
+    case 'teach':
+      return getTeach(id)
     default:
       return null
   }
@@ -69,7 +72,11 @@ function DetailBody({ entity, id }) {
     }
   }, [entity, id])
 
-  if (!['campus', 'building', 'facility', 'teacher', 'course', 'event'].includes(entity)) {
+  if (
+    !['campus', 'building', 'facility', 'teacher', 'course', 'event', 'teach'].includes(
+      entity,
+    )
+  ) {
     return <p>未知类型：{entity}</p>
   }
 
@@ -80,7 +87,7 @@ function DetailBody({ entity, id }) {
       </p>
       <h2>详情</h2>
       {error ? (
-        <Alert type="error" message={error} showIcon style={{ marginBottom: 16 }} />
+        <Alert type="error" title={error} showIcon style={{ marginBottom: 16 }} />
       ) : null}
       <Spin spinning={loading}>
         {!data && !loading && <p>未找到数据</p>}
@@ -117,10 +124,10 @@ function DetailBody({ entity, id }) {
             )}
             {entity === 'facility' && (
               <Descriptions column={1}>
+                <Descriptions.Item label="设施ID">{data.facility_id ?? id}</Descriptions.Item>
                 <Descriptions.Item label="名称">{data.facility_name}</Descriptions.Item>
                 <Descriptions.Item label="类型">{data.facility_type}</Descriptions.Item>
                 <Descriptions.Item label="开放时间">{data.open_time ?? '—'}</Descriptions.Item>
-                <Descriptions.Item label="楼层">{data.floor ?? '—'}</Descriptions.Item>
                 <Descriptions.Item label="建筑ID">{data.building_id}</Descriptions.Item>
               </Descriptions>
             )}
@@ -133,11 +140,13 @@ function DetailBody({ entity, id }) {
             )}
             {entity === 'course' && (
               <Descriptions column={1}>
+                <Descriptions.Item label="课程ID">
+                  {data.course_id ?? id}
+                </Descriptions.Item>
                 <Descriptions.Item label="课程名">{data.course_name}</Descriptions.Item>
                 <Descriptions.Item label="开课院系">
                   {data.offering_department ?? '—'}
                 </Descriptions.Item>
-                <Descriptions.Item label="学期">{data.semester ?? '—'}</Descriptions.Item>
                 <Descriptions.Item label="学分">
                   {data.credit != null ? data.credit : '—'}
                 </Descriptions.Item>
@@ -151,6 +160,27 @@ function DetailBody({ entity, id }) {
                 <Descriptions.Item label="主办">{data.organizer ?? '—'}</Descriptions.Item>
                 <Descriptions.Item label="建筑ID">{data.building_id}</Descriptions.Item>
                 <Descriptions.Item label="说明">{data.description ?? '—'}</Descriptions.Item>
+              </Descriptions>
+            )}
+            {entity === 'teach' && (
+              <Descriptions column={1}>
+                <Descriptions.Item label="教师ID">{data.teacher_id ?? '—'}</Descriptions.Item>
+                <Descriptions.Item label="课程编号">{data.course_id ?? '—'}</Descriptions.Item>
+                <Descriptions.Item label="学期">{data.semester ?? '—'}</Descriptions.Item>
+                <Descriptions.Item label="班次">{data.section_no ?? '—'}</Descriptions.Item>
+                <Descriptions.Item label="授课角色">{data.teach_role ?? '—'}</Descriptions.Item>
+                <Descriptions.Item label="开始时间">
+                  {formatDateTime(data.start_time)}
+                </Descriptions.Item>
+                <Descriptions.Item label="结束时间">
+                  {formatDateTime(data.end_time)}
+                </Descriptions.Item>
+                <Descriptions.Item label="创建时间">
+                  {formatDateTime(data.create_time)}
+                </Descriptions.Item>
+                <Descriptions.Item label="更新时间">
+                  {formatDateTime(data.update_time)}
+                </Descriptions.Item>
               </Descriptions>
             )}
           </>

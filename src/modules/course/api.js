@@ -39,8 +39,10 @@ export async function getCourse(courseId) {
     const row = await fetchEntityDetail(ENTITY, courseId)
     return normalizeDetailRow(ENTITY, row)
   }
-  const id = Number(courseId)
-  return courses.find((c) => c.course_id === id) ?? null
+  const want = String(courseId).trim()
+  return (
+    courses.find((c) => String(c.course_id).trim() === want) ?? null
+  )
 }
 
 export async function createCourse(payload) {
@@ -53,7 +55,6 @@ export async function createCourse(payload) {
       course_id: courseIdStr,
       course_name: String(payload.course_name ?? '').trim(),
       offering_department: String(payload.offering_department ?? '').trim(),
-      semester: String(payload.semester ?? '').trim(),
       credit: payload.credit,
     })
     const row = await uploadEntityRow(ENTITY, body)

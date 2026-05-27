@@ -1,5 +1,7 @@
 /** 集中存放 mock 数据；通过下方 Row 函数变更，便于与后端 api 层对齐后替换实现 */
 
+import { parseTeachRouteId, teachRowsMatch } from '../lib/teachKeys.js'
+
 /**
  * 预置账号（mock 明文密码，仅演示）：
  * - 普通用户：用户名 user / 密码 user123
@@ -141,7 +143,6 @@ export let facilities = [
     facility_name: '旦苑一楼餐厅',
     facility_type: '食堂',
     open_time: '06:30–22:00',
-    floor: '',
   },
 ]
 
@@ -159,15 +160,55 @@ export let courses = [
     course_id: 401,
     course_name: '数据库系统',
     offering_department: '计算机科学技术学院',
-    semester: '',
     credit: null,
   },
   {
     course_id: 402,
     course_name: '校园学习',
     offering_department: '计算机科学技术学院',
-    semester: '',
     credit: null,
+  },
+  {
+    course_id: 'CS20001',
+    course_name: '数据结构',
+    offering_department: '计算机科学技术学院',
+    credit: 4,
+  },
+]
+
+export let teaches = [
+  {
+    teacher_id: 301,
+    course_id: 'CS20001',
+    semester: '2025-Fall',
+    section_no: '01',
+    teach_role: '教师',
+    start_time: '2025-09-08 08:00:00',
+    end_time: '2026-01-12 18:00:00',
+    create_time: '2026-05-13 10:08:25',
+    update_time: '2026-05-13 10:08:25',
+  },
+  {
+    teacher_id: 301,
+    course_id: 'CS20001',
+    semester: '2025-Fall',
+    section_no: '02',
+    teach_role: '教师',
+    start_time: '2025-09-08 08:00:00',
+    end_time: '2026-01-12 18:00:00',
+    create_time: '2026-05-13 10:08:27',
+    update_time: '2026-05-13 10:08:27',
+  },
+  {
+    teacher_id: 301,
+    course_id: 'CS20001',
+    semester: '2026-Spring',
+    section_no: '01',
+    teach_role: '教师',
+    start_time: '2026-02-23 08:00:00',
+    end_time: '2026-06-30 18:00:00',
+    create_time: '2026-05-13 10:08:26',
+    update_time: '2026-05-13 10:08:26',
   },
 ]
 
@@ -254,7 +295,6 @@ export function createFacilityRow(payload) {
     facility_name: payload.facility_name,
     facility_type: payload.facility_type,
     open_time: payload.open_time ?? '',
-    floor: payload.floor ?? '',
   }
   facilities = [...facilities, row]
   return row
@@ -381,6 +421,55 @@ export function updateEventRow(id, payload) {
 export function deleteEventRow(id) {
   const nid = Number(id)
   events = events.filter((e) => e.event_id !== nid)
+}
+
+/* ---------- Teach（授课） ---------- */
+function teachRowKey(row) {
+  return `${row.teacher_id}|${row.course_id}|${row.semester}|${row.section_no}`
+}
+
+export function createTeachRow(payload) {
+  const row = {
+    teacher_id: Number(payload.teacher_id),
+    course_id: String(payload.course_id ?? '').trim(),
+    semester: String(payload.semester ?? '').trim(),
+    section_no: String(payload.section_no ?? '').trim(),
+    teach_role: String(payload.teach_role ?? '').trim(),
+    start_time: String(payload.start_time ?? '').trim(),
+    end_time: String(payload.end_time ?? '').trim(),
+    create_time: new Date().toISOString(),
+    update_time: new Date().toISOString(),
+  }
+  if (teaches.some((t) => teachRowKey(t) === teachRowKey(row))) {
+    throw new Error('该授课记录已存在（教师、课程、学期、班次组合重复）')
+  }
+  teaches = [...teaches, row]
+  return row
+}
+
+export function updateTeachRow(routeId, payload) {
+  const keys = parseTeachRouteId(routeId)
+  if (!keys) throw new Error('无效的授课记录标识')
+  teaches = teaches.map((t) => {
+    if (!teachRowsMatch(t, keys)) return t
+    return {
+      ...t,
+      ...payload,
+      teacher_id: Number(payload.teacher_id ?? t.teacher_id),
+      course_id: String(payload.course_id ?? t.course_id).trim(),
+      semester: String(payload.semester ?? t.semester).trim(),
+      section_no: String(payload.section_no ?? t.section_no).trim(),
+      update_time: new Date().toISOString(),
+    }
+  })
+}
+
+export function deleteTeachRow(routeId) {
+  const keys = parseTeachRouteId(routeId)
+  if (!keys) throw new Error('无效的授课记录标识')
+  const before = teaches.length
+  teaches = teaches.filter((t) => !teachRowsMatch(t, keys))
+  if (teaches.length === before) throw new Error('授课记录不存在')
 }
 
 function nextQueryRecordId() {

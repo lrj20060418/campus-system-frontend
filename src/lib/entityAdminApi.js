@@ -1,11 +1,18 @@
 import { request } from './request.js'
 import { asArray } from '../modules/query/entityBackendSearch.js'
 import {
-  buildEntityFilterBody,
+  buildEntityRemoveBody,
   entityPrimaryIdKey,
+  formatEntityIdForRequest,
+  normalizeCourseIdScalar,
   normalizeDetailRow,
   pickFirstDetailRow,
 } from './entityFilterDetail.js'
+import {
+  parseTeachRouteId,
+  teachKeysAsScalarBody,
+  teachKeysFromRow,
+} from './teachKeys.js'
 
 /** JSON.stringify 会丢掉 undefined 的键，后端收不到字段就不会更新 */
 function omitUndefined(obj) {
@@ -40,14 +47,17 @@ export async function uploadEntityRow(entity, payload) {
 function mergePrimaryKeyForUpdate(entity, id, payload) {
   const idKey = entityPrimaryIdKey(entity)
   const merged = { ...payload }
+  if (entity === 'teach') {
+    const fallback = parseTeachRouteId(id) ?? {}
+    const scalarKeys = teachKeysFromRow({ ...fallback, ...merged })
+    return { ...merged, ...teachKeysAsScalarBody(scalarKeys) }
+  }
   if (entity === 'course') {
     const raw = merged[idKey]
     merged[idKey] =
-      raw != null && String(raw).trim() !== ''
-        ? String(raw).trim()
-        : String(id ?? '')
+      normalizeCourseIdScalar(raw) || formatEntityIdForRequest(entity, id)
   } else {
-    merged[idKey] = Number(id)
+    merged[idKey] = formatEntityIdForRequest(entity, id)
   }
   return merged
 }
@@ -63,5 +73,5 @@ export async function updateEntityRow(entity, id, payload) {
 /** 删除：POST /{entity}/remove */
 export async function removeEntityRow(entity, id) {
   const path = `/${entity}${REMOVE_PATH}`
-  await request(path, { method: 'POST', json: buildEntityFilterBody(entity, id) })
+  await request(path, { method: 'POST', json: buildEntityRemoveBody(entity, id) })
 }

@@ -41,16 +41,11 @@ export default function AdminRegisterPage() {
   return (
     <div className="page">
       <h2 style={{ marginTop: 0 }}>管理员注册</h2>
-      <Paragraph type="secondary">
-        本页不在主导航中，仅通过地址 <Text code>{paths.adminRegister}</Text> 访问。请求{' '}
-        <Text code>POST /auth/register</Text>，JSON 含 <Text code>username</Text>、
-        <Text code>password</Text>、<Text code>role</Text> 为 <Text code>admin</Text>。
-      </Paragraph>
       {err ? (
-        <Alert type="error" message={err} showIcon style={{ marginBottom: 16 }} />
+        <Alert type="error" title={err} showIcon style={{ marginBottom: 16 }} />
       ) : null}
       {okMsg ? (
-        <Alert type="success" message={okMsg} showIcon style={{ marginBottom: 16 }} />
+        <Alert type="success" title={okMsg} showIcon style={{ marginBottom: 16 }} />
       ) : null}
       <Form layout="vertical" onFinish={onRegister} style={{ maxWidth: 360 }}>
         <Form.Item

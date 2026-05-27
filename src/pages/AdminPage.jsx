@@ -5,6 +5,7 @@ import FacilityAdminTab from './admin/FacilityAdminTab.jsx'
 import TeacherAdminTab from './admin/TeacherAdminTab.jsx'
 import CourseAdminTab from './admin/CourseAdminTab.jsx'
 import EventAdminTab from './admin/EventAdminTab.jsx'
+import TeachAdminTab from './admin/TeachAdminTab.jsx'
 
 const { Text } = Typography
 
@@ -12,9 +13,6 @@ export default function AdminPage() {
   return (
     <div className="page">
       <h2>管理后台</h2>
-      <Text type="secondary">
-        数据通过 <code>modules/*/api.js</code> 读写；接后端时只需替换各模块 api 实现，页面可保持不变。
-      </Text>
       <Tabs
         style={{ marginTop: 16 }}
         items={[
@@ -24,6 +22,7 @@ export default function AdminPage() {
           { key: 'teacher', label: '教师', children: <TeacherAdminTab /> },
           { key: 'course', label: '课程', children: <CourseAdminTab /> },
           { key: 'event', label: '活动', children: <EventAdminTab /> },
+          { key: 'teach', label: '授课', children: <TeachAdminTab /> },
         ]}
       />
     </div>

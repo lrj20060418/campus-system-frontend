@@ -61,14 +61,12 @@ export default function FacilityAdminTab() {
         'facility_name',
         'facility_type',
         'open_time',
-        'floor',
       ])
       const payload = {
         building_id: Number(raw.building_id),
         facility_name: String(raw.facility_name ?? '').trim(),
         facility_type: String(raw.facility_type ?? '').trim(),
         open_time: String(raw.open_time ?? ''),
-        floor: String(raw.floor ?? ''),
       }
       if (editing) {
         await updateFacility(editing.facility_id, payload)
@@ -121,7 +119,6 @@ export default function FacilityAdminTab() {
           { title: '名称', dataIndex: 'facility_name' },
           { title: '类型', dataIndex: 'facility_type' },
           { title: '开放时间', dataIndex: 'open_time' },
-          { title: '楼层', dataIndex: 'floor' },
           {
             title: '操作',
             key: 'actions',
@@ -178,9 +175,6 @@ export default function FacilityAdminTab() {
           </Form.Item>
           <Form.Item name="open_time" label="开放时间">
             <Input placeholder="如：06:30–22:00" />
-          </Form.Item>
-          <Form.Item name="floor" label="楼层">
-            <Input />
           </Form.Item>
           <Button type="primary" htmlType="button" onClick={handleSubmit}>
             保存

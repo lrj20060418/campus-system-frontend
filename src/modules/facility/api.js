@@ -33,9 +33,6 @@ async function withBuildingNameForBackend(payload) {
   const ot = out.open_time != null ? String(out.open_time) : ''
   out.open_time = ot
   out.openTime = ot
-  if (out.floor != null) {
-    out.floor = String(out.floor)
-  }
   return out
 }
 
