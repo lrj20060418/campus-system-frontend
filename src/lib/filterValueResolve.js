@@ -107,15 +107,17 @@ export function resolveFilterListValues(raw, field, options) {
   const items = parseToFilterList(raw, valueType, field)
   if (!items?.length) return undefined
 
-  const resolved = items
-    .map((v) => resolveOneFilterValue(v, options, field))
-    .filter((v) => v != null && v !== '')
+  const flat = []
+  for (const v of items) {
+    const one = resolveOneFilterValue(v, options, field)
+    if (one != null && one !== '') flat.push(one)
+  }
 
-  if (!resolved.length) return undefined
+  if (!flat.length) return undefined
 
   const seen = new Set()
   const out = []
-  for (const v of resolved) {
+  for (const v of flat) {
     const key = valueType === 'number' ? `n:${Number(v)}` : `s:${String(v)}`
     if (seen.has(key)) continue
     seen.add(key)

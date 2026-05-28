@@ -27,19 +27,25 @@ function uniqueFieldOptions(rows, field) {
 }
 
 function idLabelOptions(rows, idField, labelFn, { valueType = 'number' } = {}) {
-  return sortOptions(
-    rows.map((row) => {
-      const raw = row[idField]
-      const value =
-        valueType === 'string'
-          ? String(raw ?? '').trim()
-          : Number(raw)
-      return {
-        value: Number.isNaN(value) ? raw : value,
-        label: labelFn(row),
-      }
-    }),
-  )
+  const seen = new Set()
+  const out = []
+  for (const row of rows) {
+    const raw = row[idField]
+    const value =
+      valueType === 'string' ? String(raw ?? '').trim() : Number(raw)
+    if (valueType === 'number' && Number.isNaN(value)) continue
+    if (valueType === 'string' && !value) continue
+
+    const key = valueType === 'number' ? `n:${value}` : `s:${value}`
+    if (seen.has(key)) continue
+    seen.add(key)
+
+    out.push({
+      value: Number.isNaN(value) ? raw : value,
+      label: labelFn(row),
+    })
+  }
+  return sortOptions(out)
 }
 
 /**

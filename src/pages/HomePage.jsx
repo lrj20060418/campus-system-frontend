@@ -54,7 +54,7 @@ export default function HomePage() {
 
   return (
     <div className="page home-page">
-      <h1>复旦校园百事通</h1>
+      <h2>复旦校园百事通</h2>
       <Space.Compact style={{ width: '100%', maxWidth: 860 }}>
         <Select
           value={entity}

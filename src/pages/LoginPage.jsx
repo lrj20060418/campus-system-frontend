@@ -138,27 +138,7 @@ export default function LoginPage() {
 
                 <h2 style={{ marginTop: 0 }}>登录</h2>
 
-                {!getApiBaseUrl() ? (
 
-                  <Paragraph type="secondary">
-
-                    预置账号：普通用户 <Text code>user</Text> /{' '}
-
-                    <Text code>user123</Text>；管理员 <Text code>admin</Text> /{' '}
-
-                    <Text code>admin123</Text>
-
-                  </Paragraph>
-
-                ) : (
-
-                  <Paragraph type="secondary">
-
-                    已连接后端 <Text code>POST /auth/login</Text>
-
-                  </Paragraph>
-
-                )}
 
                 {err ? (
 
@@ -251,16 +231,6 @@ export default function LoginPage() {
               <>
 
                 <h2 style={{ marginTop: 0 }}>注册</h2>
-
-                <Paragraph type="secondary">
-
-                  请求 <Text code>POST /auth/register</Text>，JSON 字段{' '}
-
-                  <Text code>username</Text>、<Text code>password</Text>（普通用户不传{' '}
-
-                  <Text code>role</Text>；路径可用 <Text code>VITE_AUTH_REGISTER_PATH</Text> 覆盖）
-
-                </Paragraph>
 
                 {err ? (
 
